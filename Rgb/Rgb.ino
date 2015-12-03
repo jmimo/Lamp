@@ -1,9 +1,11 @@
 #include <Arduino.h>
 
+#include <Button.h>
 #include <Adafruit_TCS34725.h>
 #include <Adafruit_NeoPixel.h>
 
 #define PIN            10
+#define BUTTON         11
 #define NUMPIXELS      1
 
 typedef struct {
@@ -12,6 +14,9 @@ typedef struct {
   uint16_t blue;
   uint16_t white;
 } rgb_t;
+
+const rgb_t BLUE = { .red = 0, .green = 0, .blue = 255, .white = 0 };
+const rgb_t WHITE = { .red = 188, .green = 188, .blue = 188, .white = 0 };
 
 const uint8_t PROGMEM gamma[] = {
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -31,54 +36,58 @@ const uint8_t PROGMEM gamma[] = {
   177,180,182,184,186,189,191,193,196,198,200,203,205,208,210,213,
   215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255 };
 
-unsigned long COLOR_SAMPLE_INTERVAL = 10000;
-unsigned long lastColorSampleTime = 0;
+enum {MODE_SWITCH, COLOR_SCAN}; 
+uint8_t INPUT_STATE;
 
-//unsigned long CHANGE_COLOR_INTERVAL = 1000;
-//unsigned long lastColorChangeTime = 0;
-
-int colorSampleDelay = 154;
+Button button = Button(BUTTON, true, true, 25);
+const int COLOR_SAMPLE_DELAY = 154;
 Adafruit_TCS34725 color_sensor = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_154MS, TCS34725_GAIN_1X);
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRBW + NEO_KHZ800);
 
 rgb_t last_rgb;
-rgb_t last_color_sample;
 
 void setup() {
+  INPUT_STATE = MODE_SWITCH;
+  last_rgb = WHITE;
 
-  last_rgb.red = 188;
-  last_rgb.green = 188;
-  last_rgb.blue = 188;
-  last_rgb.white = 0;
-  last_color_sample = last_rgb;
+  //pinMode(BUTTON, INPUT);
+  //digitalWrite(BUTTON, HIGH);
   
   color_sensor.begin();
   color_sensor.setInterrupt(true);
   pixels.begin();
-
-  establishColor(last_rgb);
+  pixels.show();
 }
 
 void loop() {
-  unsigned long currentMillis = millis();
+  button.read();
+  input();
+}
 
-  if(canProcess(currentMillis, COLOR_SAMPLE_INTERVAL, &lastColorSampleTime)) {
-    last_color_sample = sampleColor();
-    changeColor(last_rgb, last_color_sample);
-    last_rgb = last_color_sample;
+void input() {
+  switch(INPUT_STATE) {
+    case MODE_SWITCH:
+      changeColor(BLUE);
+      if(button.pressedFor(100)) {
+        INPUT_STATE = COLOR_SCAN;
+      }
+    break;
+    case COLOR_SCAN:
+      if(button.pressedFor(1000)) {
+        INPUT_STATE = MODE_SWITCH;
+        break;
+      }
+      if(button.pressedFor(100)) {
+        changeColor(sampleColor());
+      }
+    break;
   }
-  /*
-  if(canProcess(currentMillis, CHANGE_COLOR_INTERVAL, &lastColorChangeTime)) {
-    changeColor(last_rgb, last_rgb_readout);
-    last_rgb = last_rgb_readout;
-  }
-  */
 }
 
 rgb_t sampleColor() {
   uint16_t red, green, blue, white;
   color_sensor.setInterrupt(false);
-  delay(colorSampleDelay);
+  delay(COLOR_SAMPLE_DELAY);
   color_sensor.getRawData(&red, &green, &blue, &white);
   color_sensor.setInterrupt(true);
   
@@ -100,9 +109,10 @@ rgb_t sampleColor() {
   return rgb;
 }
 
-void changeColor(rgb_t oldColor, rgb_t newColor) {
-  if (oldColor.red != newColor.red || oldColor.green != newColor.green || oldColor.blue != newColor.blue) {
-    fadeColor(oldColor, newColor);
+void changeColor(rgb_t newColor) {
+  if (last_rgb.red != newColor.red || last_rgb.green != newColor.green || last_rgb.blue != newColor.blue) {
+    fadeColor(last_rgb, newColor);
+    last_rgb = newColor;
   }
 }
 
@@ -129,12 +139,4 @@ void establishColor(int red, int green, int blue, int white) {
     pixels.setPixelColor(i, red, green, blue, white);
   }
   pixels.show();
-}
-
-bool canProcess(unsigned long current, unsigned long interval, unsigned long *last) {
-  if(current - *last >= interval) {
-    *last = current;
-    return true;
-  }
-  return false;
 }
