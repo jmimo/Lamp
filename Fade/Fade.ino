@@ -1,27 +1,32 @@
 #include <Adafruit_NeoPixel.h>
 
-#define PIN            1
-#define NUMPIXELS      2
+#define PIN            10
+#define NUMPIXELS      30
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRBW + NEO_KHZ800);
 
 void setup() {
   pixels.begin();
-  //pixels.setBrightness(100);
+  setColor(255, 0, 0, 0);
   pixels.show();
 }
 
-int red = true;
+int state = 0;
 
 void loop() {
-  if (red) {
-    fadeColor(255, 0, 0, 0, 0, 255);
-    red = false;
-  } else {
-    fadeColor(0, 0, 255, 255, 0, 0);
-    red = true;
+  if (state == 0) {
+    fadeColor(255, 0, 0, 0, 255, 0);
+    state = 1;
   }
-  delay(10);
+  if (state == 1) {
+    fadeColor(0, 255, 0, 0, 0, 255);
+    state = 2;
+  }
+  if (state == 2) {
+    fadeColor(0, 0, 255, 255, 0, 0);
+    state = 0;
+  }
+  delay(500);
 }
 
 void fadeColor(int rStart, int gStart, int bStart, int rEnd, int gEnd, int bEnd) {

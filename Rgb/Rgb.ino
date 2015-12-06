@@ -2,7 +2,7 @@
 
 #include <Button.h>
 #include <Adafruit_TCS34725.h>
-#include <Mimo_Neopixel.h>
+#include <Adafruit_NeoPixel.h>
 #include <Mimo_Rgb.h>
 
 #define PIN            10
@@ -15,7 +15,7 @@ uint8_t INPUT_STATE;
 Button button = Button(BUTTON, true, true, 25);
 const int COLOR_SAMPLE_DELAY = 154;
 Adafruit_TCS34725 color_sensor = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_154MS, TCS34725_GAIN_1X);
-Mimo_Neopixel mimo = Mimo_Neopixel(PIXEL_AMOUNT, PIN);
+Adafruit_NeoPixel neo_pixel = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRBW + NEO_KHZ800);
 Mimo_Rgb rgb = Mimo_Rgb();
 
 rgbw_t last_rgb;
@@ -26,8 +26,8 @@ void setup() {
   
   color_sensor.begin();
   color_sensor.setInterrupt(true);
-  mimo.begin();
-  mimo.show();
+  neo_pixel.begin();
+  neo_pixel.show();
 }
 
 void loop() {
@@ -64,9 +64,29 @@ rgbw_t sampleColor() {
   return rgb.convert(red, green, blue, white);
 }
 
-void changeColor(rgbw_t newColor) {
-  if (last_rgb.red != newColor.red || last_rgb.green != newColor.green || last_rgb.blue != newColor.blue) {
-    mimo.fade(last_rgb, newColor);
-    last_rgb = newColor;
+void changeColor(rgbw_t color) {
+  if (last_rgb.red != color.red || last_rgb.green != color.green || last_rgb.blue != color.blue) {
+    mimo.fade(last_rgb, color);
+    last_rgb = color;
   }
+}
+
+void fade(rgbw_t start, rgbw_t end, uint8_t steps) {
+  for (int i = 0; i < steps; i++)
+  {
+      BaseType::setPixelColor(
+        start.red + (end.red - start.red) * i / steps,
+        start.green + (end.green - start.green) * i / steps,
+        start.blue + (end.blue - start.blue) * i / steps,
+        0
+        );
+      delay(10);
+  }
+}
+
+void wipePixelColor(rgbw_t color) {
+    for(uint16_t i = 0 ;  i < PIXEL_AMOUNT ; i++) {
+        neo_pixel.setPixelColor(i, color.red, color.green, color.blue, color.white);
+    }
+    neo_pixel.show();
 }
