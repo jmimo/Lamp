@@ -15,13 +15,17 @@ Mimo_Rgb rgb = Mimo_Rgb();
 Button button_001 = Button(BUTTON_001, true, true, 25);
 Button button_002 = Button(BUTTON_002, true, true, 25);
 
-enum {COLOR_SCAN, FADE};
+enum { COLOR_SCAN, RANDOM_FADE, CHAOS };
 
 uint8_t input_state;
-rgbw_t last_rgb = rgb.WHITE;
-int fade_state = 0;
+uint32_t last_rgb;
+
+unsigned long rf_wait_time = 2000;
+unsigned long rf_wait_start = 0;
 
 void setup() {
+  randomSeed(analogRead(0));
+  last_rgb = createRandomColor();
   pixels.begin();
   wipeColor(last_rgb);
   pixels.show();
@@ -32,35 +36,49 @@ void setup() {
 void loop() {
   button_001.read();
   button_002.read();
+  state();
   input();
 }
 
 void input() {
-  if(button_001.wasPressed()) {
-    switch(input_state) {
-      case COLOR_SCAN:
-      rgbw_t temp = sampleColor();
-      fade(last_rgb, temp);
-      last_rgb = temp;
-      break;
-    }
-  }
   if(button_002.wasPressed()) {
     switch(input_state) {
       case COLOR_SCAN:
-      input_state = FADE;
+      input_state = RANDOM_FADE;
       break;
-      case FADE:
+      case RANDOM_FADE:
+      input_state = CHAOS;
+      break;
+      case CHAOS:
       input_state = COLOR_SCAN;
       break;
     }
   }
-  if(input_state == FADE) {
-    pulse();
+}
+
+void state() {
+    switch(input_state) {
+    case RANDOM_FADE:
+      randomFade();
+      break;
+    case COLOR_SCAN:
+      scanColor();
+      break;
+    case CHAOS:
+      chaos();
+      break;
   }
 }
 
-rgbw_t sampleColor() {
+void scanColor() {
+  if(button_001.wasPressed()) {
+    uint32_t temp = sampleColor();
+    fade(last_rgb, temp);
+    last_rgb = temp;
+  }
+}
+
+uint32_t sampleColor() {
   uint16_t red, green, blue, white;
   color_sensor.setInterrupt(false);
   delay(COLOR_SAMPLE_DELAY);
@@ -69,36 +87,44 @@ rgbw_t sampleColor() {
   return rgb.convert(red, green, blue, white);
 }
 
-void pulse() {
-  if(fade_state == 0) {
-    fade(rgb.BLUE, rgb.GREEN);
-    fade_state = 1;
-  } else if(fade_state == 1) {
-    fade(rgb.GREEN, rgb.RED);
-    fade_state = 2;
-  } else if(fade_state == 2) {
-    fade(rgb.RED, rgb.BLUE);
-    fade_state = 0;
+void randomFade() {
+  if(millis() - rf_wait_start < rf_wait_time) {
+    return;
   }
-  delay(500);
+  uint32_t next = createRandomColor();
+  fade(last_rgb, next);
+  last_rgb = next;
+  rf_wait_start = millis();
 }
 
-void fade(rgbw_t start, rgbw_t end) {
+void chaos() {
+  for(int i = 0 ; i < NUMPIXELS ; i++){
+    pixels.setPixelColor(i, createRandomColor());
+  }
+  pixels.show();
+}
+
+uint32_t createRandomColor() {
+  return rgb.Color(random(0, 255), random(0, 255), random(0, 255), 0);
+}
+
+void fade(uint32_t start, uint32_t end) {
   int n = 256;
   for (int i = 0; i < n; i++) {
-      rgbw_t next;
-      next.red = start.red + (end.red - start.red) * i / n;
-      next.green = start.green + (end.green - start.green) * i / n;
-      next.blue = start.blue + (end.blue - start.blue) * i / n;
-      next.white = 0;
-      wipeColor(next);
+      wipeColor(
+          rgb.Color(
+            rgb.Red(start) * (n - i) + (rgb.Red(end) * i) / n,
+            rgb.Green(start) * (n - i) + (rgb.Green(end) * i) / n,
+            rgb.Blue(start) * (n - i) + (rgb.Blue(end) * i) / n,
+          0)
+        );
+      delay(5);
   }
-  delay(10);
 }
 
-void wipeColor(rgbw_t color) {
+void wipeColor(uint32_t color) {
   for(int i = 0 ; i < NUMPIXELS ; i++){
-    pixels.setPixelColor(i, color.red, color.green, color.blue, color.white);
+    pixels.setPixelColor(i, rgb.Red(color), rgb.Green(color), rgb.Blue(color), rgb.White(color));
   }
   pixels.show();
 }

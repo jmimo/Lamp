@@ -3,13 +3,6 @@
 
 #include <Arduino.h>
 
-typedef struct {
-  uint8_t red;
-  uint8_t green;
-  uint8_t blue;
-  uint8_t white;
-} rgbw_t;
-
 const uint8_t PROGMEM GAMMA[] = {
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,
@@ -31,19 +24,48 @@ const uint8_t PROGMEM GAMMA[] = {
 class Mimo_Rgb {
 
 public:
-    const rgbw_t BLUE = { .red = 0, .green = 0, .blue = 255, .white = 0 };
-    const rgbw_t RED = { .red = 255, .green = 0, .blue = 0, .white = 0 };
-    const rgbw_t GREEN = { .red = 0, .green = 255, .blue = 0, .white = 0 };
-    const rgbw_t WHITE = { .red = 188, .green = 188, .blue = 188, .white = 0 };
-    const rgbw_t BRIGHT = { .red = 0, .green = 0, .blue = 0, .white = 255 };
+    const uint32_t RED = Color(255, 0, 0, 0);
+    const uint32_t GREEN = Color(0, 255, 0, 0);
+    const uint32_t BLUE = Color(0, 0, 255, 0);
+    const uint32_t WHITE = Color(188, 188, 188, 0);
+    const uint32_t BRIGHT = Color(0, 0, 0, 255);
 
     explicit Mimo_Rgb() {
     }
 
-    rgbw_t convert(uint16_t red, uint16_t green, uint16_t blue, uint16_t white);
+    uint32_t convert(uint16_t red, uint16_t green, uint16_t blue, uint16_t white);
+
+    uint8_t White(uint32_t color) {
+      return (color >> 24) & 0xFF;
+    }
+
+    int8_t Red(uint32_t color)
+    {
+        return (color >> 16) & 0xFF;
+    }
+
+    uint8_t Green(uint32_t color)
+    {
+        return (color >> 8) & 0xFF;
+    }
+
+    uint8_t Blue(uint32_t color)
+    {
+        return color & 0xFF;
+    }
+
+    uint32_t Color(uint8_t red, uint8_t green, uint8_t blue, uint8_t white) {
+      return ((uint32_t)white << 24) | ((uint32_t)red << 16) | ((uint32_t)green <<  8) | blue;
+    }
+
+    uint32_t DimColor(uint32_t color)
+    {
+        uint32_t dimColor = Color(Red(color) >> 1, Green(color) >> 1, Blue(color) >> 1, White(color) >> 1);
+        return dimColor;
+    }
 
 private:
-    const uint8_t correct(int color) const {
+    const uint8_t gammaCorrect(int color) const {
         return pgm_read_byte(&GAMMA[color]);
     }
 };
