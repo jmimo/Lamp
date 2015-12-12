@@ -16,4 +16,6 @@ rgbw_t Mimo_Rgb::convert(uint16_t red, uint16_t green, uint16_t blue, uint16_t w
   rgbw.green = correct(g);
   rgbw.blue = correct(b);
   rgbw.white = 0;
+
+  return rgbw;
 }

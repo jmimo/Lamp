@@ -29,17 +29,19 @@ const uint8_t PROGMEM GAMMA[] = {
   215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255 };
 
 class Mimo_Rgb {
-    
+
 public:
     const rgbw_t BLUE = { .red = 0, .green = 0, .blue = 255, .white = 0 };
+    const rgbw_t RED = { .red = 255, .green = 0, .blue = 0, .white = 0 };
+    const rgbw_t GREEN = { .red = 0, .green = 255, .blue = 0, .white = 0 };
     const rgbw_t WHITE = { .red = 188, .green = 188, .blue = 188, .white = 0 };
     const rgbw_t BRIGHT = { .red = 0, .green = 0, .blue = 0, .white = 255 };
-    
-    explicit Mimo_Rgb() {   
+
+    explicit Mimo_Rgb() {
     }
-    
+
     rgbw_t convert(uint16_t red, uint16_t green, uint16_t blue, uint16_t white);
-    
+
 private:
     const uint8_t correct(int color) const {
         return pgm_read_byte(&GAMMA[color]);

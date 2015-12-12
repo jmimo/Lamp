@@ -100,6 +100,5 @@ void wipeColor(rgbw_t color) {
   for(int i = 0 ; i < NUMPIXELS ; i++){
     pixels.setPixelColor(i, color.red, color.green, color.blue, color.white);
   }
-  pixels.show(); 
+  pixels.show();
 }
-
