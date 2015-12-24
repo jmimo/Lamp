@@ -39,7 +39,7 @@ public:
       return (color >> 24) & 0xFF;
     }
 
-    int8_t Red(uint32_t color)
+    uint8_t Red(uint32_t color)
     {
         return (color >> 16) & 0xFF;
     }

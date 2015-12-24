@@ -1,10 +1,7 @@
 #include "Mimo_Rgb.h"
 
 uint32_t Mimo_Rgb::convert(uint16_t red, uint16_t green, uint16_t blue, uint16_t white) {
-  uint32_t sum = red;
-  sum += green;
-  sum += blue;
-  sum += white;
+  uint32_t sum = white;
   float r, g, b;
   r = red; r /= sum;
   g = green; g /= sum;

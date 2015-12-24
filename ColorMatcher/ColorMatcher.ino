@@ -15,13 +15,32 @@ Mimo_Rgb rgb = Mimo_Rgb();
 Button button_001 = Button(BUTTON_001, true, true, 25);
 Button button_002 = Button(BUTTON_002, true, true, 25);
 
-enum { COLOR_SCAN, RANDOM_FADE, CHAOS };
+enum { COLOR_SCAN, RANDOM_FADE, RADICAL, DICE};
 
 uint8_t input_state;
 uint32_t last_rgb;
 
 unsigned long rf_wait_time = 2000;
 unsigned long rf_wait_start = 0;
+
+unsigned long ra_wait_time = 250;
+unsigned long ra_wait_start = 0;
+int ra_index = 0;
+
+const uint32_t named_colors[] = {
+  rgb.Color(128, 0, 0, 0),
+  rgb.Color(255, 0, 0, 0),
+  rgb.Color(128, 128, 0, 0),
+  rgb.Color(255, 255, 0, 0),
+  rgb.Color(0, 128, 0, 0),
+  rgb.Color(0, 255, 0, 0),
+  rgb.Color(0, 128, 128, 0),
+  rgb.Color(0, 255, 255, 0),
+  rgb.Color(0, 0, 128, 0),
+  rgb.Color(0, 0, 255, 0),
+  rgb.Color(128, 0, 128, 0),
+  rgb.Color(255, 0, 255, 0)
+};
 
 void setup() {
   randomSeed(analogRead(0));
@@ -47,11 +66,13 @@ void input() {
       input_state = RANDOM_FADE;
       break;
       case RANDOM_FADE:
-      input_state = CHAOS;
+      input_state = RADICAL;
       break;
-      case CHAOS:
+      case RADICAL:
+      input_state = DICE;
+      break;
+      case DICE:
       input_state = COLOR_SCAN;
-      break;
     }
   }
 }
@@ -64,8 +85,11 @@ void state() {
     case COLOR_SCAN:
       scanColor();
       break;
-    case CHAOS:
-      chaos();
+    case RADICAL:
+      radical();
+      break;
+    case DICE:
+      dice();
       break;
   }
 }
@@ -97,11 +121,23 @@ void randomFade() {
   rf_wait_start = millis();
 }
 
-void chaos() {
-  for(int i = 0 ; i < NUMPIXELS ; i++){
-    pixels.setPixelColor(i, createRandomColor());
+void radical() {
+  if(millis() - ra_wait_start < ra_wait_time) {
+    return;
   }
-  pixels.show();
+  if (ra_index >= sizeof(named_colors)) {
+    ra_index = 0;
+  }
+  wipeColor(named_colors[ra_index]);
+  ++ra_index;
+  ra_wait_start = millis();
+}
+
+void dice() {
+  if(button_001.wasPressed()) {
+    last_rgb = createRandomColor();
+    wipeColor(last_rgb);
+  }
 }
 
 uint32_t createRandomColor() {
@@ -113,9 +149,9 @@ void fade(uint32_t start, uint32_t end) {
   for (int i = 0; i < n; i++) {
       wipeColor(
           rgb.Color(
-            rgb.Red(start) * (n - i) + (rgb.Red(end) * i) / n,
-            rgb.Green(start) * (n - i) + (rgb.Green(end) * i) / n,
-            rgb.Blue(start) * (n - i) + (rgb.Blue(end) * i) / n,
+            rgb.Red(start) + (rgb.Red(end) - rgb.Red(start)) * i / n,
+            rgb.Green(start) + (rgb.Green(end) - rgb.Green(start)) * i / n,
+            rgb.Blue(start) + (rgb.Blue(end) - rgb.Blue(start)) * i / n,
           0)
         );
       delay(5);
@@ -124,7 +160,7 @@ void fade(uint32_t start, uint32_t end) {
 
 void wipeColor(uint32_t color) {
   for(int i = 0 ; i < NUMPIXELS ; i++){
-    pixels.setPixelColor(i, rgb.Red(color), rgb.Green(color), rgb.Blue(color), rgb.White(color));
+    pixels.setPixelColor(i, color);
   }
   pixels.show();
 }
